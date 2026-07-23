@@ -226,6 +226,31 @@ The repo includes a multi-stage Dockerfile.
 
 The included `docker-compose.yml` is set up for the existing Jennifer infrastructure and maps the app to host port `3008`.
 
+## Quick start
+
+### Local development
+
+```bash
+cp .env.example .env
+npm install
+npm run db:generate
+npm run db:push
+npm run dev
+```
+
+### Production build
+
+```bash
+npm run build
+npm run start
+```
+
+### Seed sample content
+
+```bash
+npm run db:seed
+```
+
 ## Configuration
 
 Copy `.env.example` to `.env` and fill in real values.
@@ -237,6 +262,25 @@ Common variables used by the app:
 - `NEXTAUTH_SECRET`
 - `NEXT_PUBLIC_GA_ID` (optional)
 - `STORAGE_PATH` (runtime/container use)
+
+## Deployment
+
+The repository is already wired for the Jennifer Docker environment.
+
+Typical deployment flow:
+
+1. Commit and push the source changes to both mirrors.
+2. Rebuild the image on Jennifer.
+3. Restart the `imzadi-v2-web` container.
+4. Verify the homepage, post pages, feed, and media links.
+
+Important runtime facts:
+
+- container: `imzadi-v2-web`
+- site directory on Jennifer: `/docker/sites/imzadi-v2`
+- media volume: `/data/imzadi-v2/media`
+- exposed host port: `3008`
+- app port inside container: `3000`
 
 ## Development notes
 
