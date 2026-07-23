@@ -1,0 +1,70 @@
+// ImZaDi v2 — Unified Media Schema
+// Stores blog posts with unified media references (pdf/img/audio)
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Unified media attachment model — handles PDFs, images, and audio
+model Media {
+  id          String    @id @default(cuid())
+  type        MediaType
+  filename    String    // original filename
+  storedPath  String    // relative path in storage (e.g., "pdfs/abc123.pdf")
+  url         String?   // optional public URL if served via CDN
+  title       String?
+  mimeType    String?
+  size        Int?      // bytes
+  metadata    Json?     // extra data (duration for audio, dimensions for images, page count for PDFs)
+  postId      String?
+  post        BlogPost? @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt   DateTime  @default(now())
+
+  @@index([postId])
+  @@index([type])
+}
+
+enum MediaType {
+  PDF
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
+model Tag {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  posts     BlogPost[] @relation("PostTags")
+  createdAt DateTime   @default(now())
+}
+
+model BlogPost {
+  id                String    @id @default(cuid())
+  title             String
+  slug              String    @unique
+  excerpt           String    @db.Text
+  content           String?   @db.Text  // full story text
+  featured          Boolean   @default(false)
+  published         Boolean   @default(true)
+  author            String?   // author name (e.g., "Gloria")
+  featuredAudioId   String?   // ID of the featured audio Media item
+  featuredImageId   String?   // ID of the featured image Media item
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Media relations — all attachments via single relation
+  // Filter by type (MediaType) when querying for specific media
+  media             Media[]
+  tags              Tag[]     @relation("PostTags")
+
+  @@index([slug])
+  @@index([createdAt])
+  @@index([featured])
+}
