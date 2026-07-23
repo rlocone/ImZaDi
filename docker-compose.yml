@@ -1,0 +1,38 @@
+services:
+  imzadi-v2-web:
+    image: imzadi-v2-web:latest
+    container_name: imzadi-v2-web
+    hostname: imzadi-v2-web
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@master-pgbouncer:5432/imzadi_v2?pgbouncer=true
+      NODE_ENV: production
+      NEXT_TELEMETRY_DISABLED: "1"
+      STORAGE_PATH: /data/imzadi-v2/media
+      TZ: America/New_York
+    volumes:
+      - imzadi-v2-media:/data/imzadi-v2/media
+    ports:
+      - "3008:3000"
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    networks:
+      - data_default
+      - docker_public_net
+
+volumes:
+  imzadi-v2-media:
+    name: imzadi-v2-media
+    external: true
+
+networks:
+  data_default:
+    name: data_default
+    external: true
+  docker_public_net:
+    name: docker_public_net
+    external: true

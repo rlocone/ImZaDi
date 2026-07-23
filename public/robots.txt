@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://imzadi.love/sitemap.xml
