@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/db';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
-import Image from 'next/image';
-import { Heart, ArrowLeft, FileText, Headphones } from 'lucide-react';
+import { Heart, ArrowLeft, Headphones } from 'lucide-react';
 import { format } from 'date-fns';
 import AudioPlayer from '@/components/audio-player';
 import SocialShare from '@/components/social-share';
 import PdfList from '@/components/pdf-list';
+import StillsGallery from '@/components/stills-gallery';
 import type { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
@@ -131,49 +131,41 @@ export default async function PostPage({ params }: { params: { slug: string } })
             )}
           </div>
 
-          {featuredImage && (
-            <div className="relative aspect-video bg-gray-900 mb-10 rounded-lg overflow-hidden">
-              <Image src={featuredImage.url} alt={post.title} fill className="object-cover" priority sizes="(max-width: 768px) 100vw, (max-width: 1200px) 80vw, 1200px" />
-            </div>
-          )}
-
-          {featuredAudio && (
-            <div className="mb-10">
-              <div className="flex items-center gap-2 text-purple-400 mb-4">
-                <Headphones className="w-5 h-5" />
-                <h2 className="text-lg font-semibold">Listen to this story</h2>
+          {(featuredImage || stills.length > 0) ? (
+            <StillsGallery
+              featured={
+                featuredImage
+                  ? { id: featuredImage.id, url: featuredImage.url, title: featuredImage.title || post.title }
+                  : null
+              }
+              stills={stills.map((still: any) => ({
+                id: still.id,
+                url: still.url,
+                title: still.title,
+              }))}
+              storyTitle={post.title}
+              afterFeatured={
+                featuredAudio ? (
+                  <div className="mb-10">
+                    <div className="flex items-center gap-2 text-purple-400 mb-4">
+                      <Headphones className="w-5 h-5" />
+                      <h2 className="text-lg font-semibold">Listen to this story</h2>
+                    </div>
+                    <AudioPlayer src={featuredAudio.url} type={featuredAudio.type.toLowerCase()} />
+                  </div>
+                ) : null
+              }
+            />
+          ) : (
+            featuredAudio ? (
+              <div className="mb-10">
+                <div className="flex items-center gap-2 text-purple-400 mb-4">
+                  <Headphones className="w-5 h-5" />
+                  <h2 className="text-lg font-semibold">Listen to this story</h2>
+                </div>
+                <AudioPlayer src={featuredAudio.url} type={featuredAudio.type.toLowerCase()} />
               </div>
-              <AudioPlayer src={featuredAudio.url} type={featuredAudio.type.toLowerCase()} />
-            </div>
-          )}
-
-          {stills.length > 0 && (
-            <section className="mb-10" aria-label="Story stills">
-              <div className="flex items-center gap-2 text-purple-400 mb-4">
-                <h2 className="text-lg font-semibold">Stills</h2>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {stills.map((still: any) => (
-                  <figure
-                    key={still.id}
-                    className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-700 hover:border-purple-600/50 transition-colors shadow-md"
-                  >
-                    <Image
-                      src={still.url}
-                      alt={still.title || `${post.title} still`}
-                      fill
-                      className="object-cover"
-                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
-                    />
-                    {still.title && (
-                      <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent px-3 py-2 text-xs text-gray-300">
-                        {still.title}
-                      </figcaption>
-                    )}
-                  </figure>
-                ))}
-              </div>
-            </section>
+            ) : null
           )}
 
           <div className="prose prose-lg max-w-none">
