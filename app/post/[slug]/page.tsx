@@ -74,6 +74,17 @@ export default async function PostPage({ params }: { params: { slug: string } })
     description: m.metadata?.description || '',
   }));
 
+  // Remaining IMAGE media for the stills gallery (exclude featured so it is not duplicated).
+  const stills = post.media.filter(
+    (m: any) =>
+      m.type === 'IMAGE' &&
+      m.id !== post.featuredImageId &&
+      // If featuredImageId is unset, featuredImage falls back to the first IMAGE —
+      // still exclude that one so the hero is not repeated.
+      (!featuredImage || m.id !== featuredImage.id) &&
+      m.url
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-gray-900 to-black">
       <header className="sticky top-0 z-50 backdrop-blur-md bg-gray-900/80 border-b border-purple-600/30">
@@ -134,6 +145,35 @@ export default async function PostPage({ params }: { params: { slug: string } })
               </div>
               <AudioPlayer src={featuredAudio.url} type={featuredAudio.type.toLowerCase()} />
             </div>
+          )}
+
+          {stills.length > 0 && (
+            <section className="mb-10" aria-label="Story stills">
+              <div className="flex items-center gap-2 text-purple-400 mb-4">
+                <h2 className="text-lg font-semibold">Stills</h2>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {stills.map((still: any) => (
+                  <figure
+                    key={still.id}
+                    className="relative aspect-video bg-gray-900 rounded-lg overflow-hidden border border-gray-700 hover:border-purple-600/50 transition-colors shadow-md"
+                  >
+                    <Image
+                      src={still.url}
+                      alt={still.title || `${post.title} still`}
+                      fill
+                      className="object-cover"
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 560px"
+                    />
+                    {still.title && (
+                      <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-900/90 via-gray-900/50 to-transparent px-3 py-2 text-xs text-gray-300">
+                        {still.title}
+                      </figcaption>
+                    )}
+                  </figure>
+                ))}
+              </div>
+            </section>
           )}
 
           <div className="prose prose-lg max-w-none">
