@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""ImZaDi article pipeline. Cover: pdfimages then pdftoppm; AI only with --ai-cover.
+"""ImZaDi article pipeline. Cover: pdfimages (-all/-png/-j) then PPM convert; pdftoppm last; AI only with --ai-cover.
+
+Requires: poppler-utils (pdfimages, pdftoppm, pdftotext). ImageMagick optional —
+PPM/PGM/PBM conversion tries Pillow, GraphicsMagick (gm), ffmpeg, then ImageMagick convert.
+
 Env IMZADI_API default http://localhost:3004
 CLI: python3 imzadi-article-pipeline.py <story-dir> [--recreate] [--tags=A,B] [--dry-run] [--ai-cover]
      python3 imzadi-article-pipeline.py --root <parent> [...]
 Jennifer:
   python3 scripts/imzadi-article-pipeline.py /home/ginger/projects/imzadi/catatumbo --dry-run --tags=Sci-Fi,Speculative
-  IMZADI_API=https://imzadi.love python3 scripts/imzadi-article-pipeline.py --root /home/ginger/projects/imzadi/catatumbo --tags=Sci-Fi,Speculative
-  IMZADI_API=http://imzadi-v2-web:3000 python3 scripts/imzadi-article-pipeline.py /home/ginger/projects/imzadi/catatumbo --tags=Sci-Fi,Speculative
+  IMZADI_API=https://imzadi.love python3 scripts/imzadi-article-pipeline.py --root /home/ginger/projects/imzadi --tags=Sci-Fi,Speculative
+  IMZADI_API=http://imzadi-v2-web:3000 python3 scripts/imzadi-article-pipeline.py /home/ginger/projects/imzadi/catatumbo --tags=Sci-Fi,Speculative --recreate
 """
 from __future__ import annotations
 import os,re,sys,json,time,uuid,base64,shutil,tempfile,subprocess
@@ -76,24 +80,85 @@ def ai_cover(name,excerpt,out):
   out.write_bytes(base64.b64decode(b64)); print(f"  AI cover saved"); return True
  except Exception as e: print(f"  AI cover error: {e}"); return False
 def usable(p,mn=8000): return p.is_file() and p.stat().st_size>=mn and p.suffix.lower() in IMG|{".ppm",".pbm",".pgm"}
+def _ppm_to_png(src, dest):
+ """Convert PPM/PGM/PBM to PNG without requiring ImageMagick.
+ Order: Pillow -> gm convert -> ffmpeg -> ImageMagick convert.
+ Returns True on success.
+ """
+ dest=Path(dest); src=Path(src)
+ try:
+  from PIL import Image
+  Image.open(src).save(dest, format="PNG")
+  if usable(dest): print(f"  PPM->PNG via Pillow ({src.name})"); return True
+ except Exception: pass
+ if shutil.which("gm"):
+  if run(f"gm convert {str(src)!r} {str(dest)!r}")[2]==0 and usable(dest):
+   print(f"  PPM->PNG via gm ({src.name})"); return True
+ if shutil.which("ffmpeg"):
+  if run(f"ffmpeg -y -i {str(src)!r} {str(dest)!r}")[2]==0 and usable(dest):
+   print(f"  PPM->PNG via ffmpeg ({src.name})"); return True
+ if shutil.which("convert"):
+  if run(f"convert {str(src)!r} {str(dest)!r}")[2]==0 and usable(dest):
+   print(f"  PPM->PNG via ImageMagick convert ({src.name})"); return True
+ return False
+
+def _pick_embed(cands):
+ use=[p for p in cands if usable(p)]
+ if not use: return None
+ return max(use,key=lambda p:p.stat().st_size)
+
 def extract_cover(pdf,work):
+ """Extract embedded cover from PDF.
+ Prefer real embeds via pdfimages (-all, -png, -j). Convert leftover PPM/PGM/PBM
+ without ImageMagick when possible. pdftoppm page raster is LAST resort.
+ Containers need poppler-utils; ImageMagick is optional.
+ """
  work.mkdir(parents=True,exist_ok=True); stem=pdf.stem; final=work/f"{stem}-cover.png"
- run(f"pdfimages -j {str(pdf)!r} {str(work/f'{stem}-emb')!r}")
- cands=sorted(work.glob(f"{stem}-emb*")); use=[p for p in cands if usable(p)]
- if use:
-  best=max(use,key=lambda p:p.stat().st_size); ext=best.suffix.lower()
+ # Clear prior embed attempts in work
+ for old in work.glob(f"{stem}-emb*"):
+  try: old.unlink()
+  except OSError: pass
+
+ attempts=[
+  ("pdfimages -all", f"pdfimages -all {str(pdf)!r} {str(work/f'{stem}-emb')!r}"),
+  ("pdfimages -png", f"pdfimages -png {str(pdf)!r} {str(work/f'{stem}-emb')!r}"),
+  ("pdfimages -j", f"pdfimages -j {str(pdf)!r} {str(work/f'{stem}-emb')!r}"),
+ ]
+ for label,cmd in attempts:
+  for old in work.glob(f"{stem}-emb*"):
+   try: old.unlink()
+   except OSError: pass
+  out,err,rc=run(cmd)
+  cands=sorted(work.glob(f"{stem}-emb*"))
+  best=_pick_embed(cands)
+  if not best:
+   print(f"  {label}: no usable embeds (rc={rc})")
+   continue
+  ext=best.suffix.lower()
   if ext in IMG:
-   final=work/f"{stem}-cover{ext}"; shutil.copy2(best,final); print(f"  Cover via pdfimages: {best.name}"); return final,"pdfimages"
+   final=work/f"{stem}-cover{ext}"; shutil.copy2(best,final)
+   print(f"  Cover via {label}: {best.name} ({best.stat().st_size} bytes)")
+   return final,label.replace(" ","-")
+  # PPM/PGM/PBM — convert without relying on ImageMagick alone
   conv=work/f"{stem}-cover.png"
-  if run(f"convert {str(best)!r} {str(conv)!r}")[2]==0 and usable(conv): print(f"  Cover via pdfimages+convert"); return conv,"pdfimages"
- for p in cands:
+  if _ppm_to_png(best,conv):
+   print(f"  Cover via {label}+PPM-convert: {best.name}")
+   return conv,f"{label.replace(' ','-')}+ppm"
+  print(f"  {label}: got {best.name} but PPM convert failed")
+
+ for p in work.glob(f"{stem}-emb*"):
   try: p.unlink()
   except OSError: pass
- print("  Falling back to pdftoppm..."); run(f"pdftoppm -r 150 -png -f 1 -l 1 {str(pdf)!r} {str(work/stem)!r}")
- actual=work/f"{stem}-1.png"; 
+
+ print("  Falling back to pdftoppm (last resort)...")
+ run(f"pdftoppm -r 150 -png -f 1 -l 1 {str(pdf)!r} {str(work/stem)!r}")
+ actual=work/f"{stem}-1.png"
  if not actual.exists(): actual=work/f"{stem}-01.png"
  if actual.exists(): actual.rename(final)
- if final.exists() and usable(final): print(f"  Cover via pdftoppm"); return final,"pdftoppm"
+ if final.exists() and usable(final):
+  print(f"  Cover via pdftoppm: {final.name} ({final.stat().st_size} bytes)")
+  return final,"pdftoppm"
+ print("  Cover extraction failed (none)")
  return None,"none"
 def generate_cover(pdf,work,name=None,excerpt=None,use_ai=False):
  work=Path(work); work.mkdir(parents=True,exist_ok=True); stem=Path(pdf).stem
@@ -192,7 +257,7 @@ def process(story_dir,recreate=False,tags=None,dry=False,ai=False):
  if dry:
   print("\n-- DRY-RUN --"); print(f"  slug: {slug}\n  excerpt_len: {len(excerpt)}\n  excerpt: {excerpt[:300]}\n  cover_method: {method}\n  cover_path: {cover}")
   print(f"  PDFs ({len(pdfs)}):"); [print(f"    - {p.name}") for p in pdfs]
-  print(f"  Audio ({len(auds)}):"); [print(f"    - {p.name}") for p in auds]
+  print(f"  Audio ({len(auds)}):"); [print(f"    - {p.name}") for p in imgs]
   print(f"  Images ({len(imgs)}):"); [print(f"    - {p.name}") for p in imgs]
   print(f"  featuredImage: PDF cover ({method})\n  featuredAudio: {auds[0].name if auds else '(none)'}")
   shutil.rmtree(work,ignore_errors=True); return True
