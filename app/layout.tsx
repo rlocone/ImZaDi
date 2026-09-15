@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXTAUTH_URL || 'https://imzadi.love'),
   title: {
     default: 'ImZaDi - Stories That Connect',
     template: '%s | ImZaDi',
