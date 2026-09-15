@@ -13,6 +13,12 @@ export const dynamic = 'force-dynamic';
 
 const baseUrl = process.env.NEXTAUTH_URL || 'https://imzadi.love';
 
+function absoluteMediaUrl(path: string | undefined | null): string {
+  if (!path) return `${baseUrl}/og-image.png`;
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${baseUrl}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 async function getPost(slug: string) {
   try {
     const post = await prisma.blogPost.findUnique({
@@ -36,9 +42,10 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   if (!post) return { title: 'Post Not Found' };
 
   const excerpt = post.excerpt.substring(0, 200).trim() + '...';
-  const imageUrl = post.featuredImageId
+  const rawImageUrl = post.featuredImageId
     ? post.media.find((m: any) => m.id === post.featuredImageId)?.url
     : post.media.find((m: any) => m.type === 'IMAGE')?.url || '/og-image.png';
+  const imageUrl = absoluteMediaUrl(rawImageUrl);
 
   return {
     title: post.title,
