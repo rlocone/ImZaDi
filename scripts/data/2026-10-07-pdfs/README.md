@@ -18,7 +18,8 @@ links and the `Media` rows do not change. No database change is needed for this 
 None of the 31 Love of a Lifetime v1 PDFs is in the batch (their uuids are listed in
 `MANIFEST.json` → `excluded_v1_pdf_uuids`, and both scripts refuse them).
 
-**The PDF binaries are not in git** (6.4 MB total). They are in the handoff folder on the box:
+**The PDF binaries are not in git** (165 MB total: the covers are the original full-resolution images,
+losslessly extracted from the old PDFs; James, 2026-10-07 11:22 AM ET). They are in the handoff folder on the box:
 `/workspace/imzadi-content-20261007/pdfs/<uuid>.pdf`, next to copies of these scripts. `MANIFEST.json`
 holds old/new sha256, sizes and page counts; the scripts check every hash before writing anything.
 

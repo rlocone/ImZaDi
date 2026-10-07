@@ -208,7 +208,7 @@ if __name__ == '__main__':
     os.makedirs(f'{W}/pdfbuild/out', exist_ok=True)
     for code in sys.argv[1:]:
         b = build(code)
-        cover = f'{W}/covers/{code}-cover.jpg'
+        cover = f'{W}/covers/{code}-cover-000.png'   # full-resolution cover, losslessly extracted from the old PDF (pdfimages -png); James 10/7 11:22
         open(f'{W}/pdfbuild/out/{code}.html', 'w', encoding='utf-8').write(render(b, 'file://' + cover))
         qa = {k: b[k] for k in ('code', 'uuid', 'icon', 'title', 'old_title', 'old_pages', 'n_paras', 'pua_fixed')}
         qa['kinds'] = {}
