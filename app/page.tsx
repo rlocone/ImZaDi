@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/db';
+import Link from 'next/link';
 import { Heart, Facebook, DollarSign, AlertCircle } from 'lucide-react';
 import SocialShare from '@/components/social-share';
 import PostCard from '@/components/post-card';
@@ -33,6 +34,9 @@ export default async function HomePage() {
               <h1 className="text-2xl font-bold text-white">ImZaDi</h1>
             </div>
             <div className="flex items-center gap-3">
+              <Link href="/tags" title="Browse stories by tag" className="px-3 py-2 rounded-lg text-sm font-medium bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 hover:text-purple-200 transition-colors">
+                Tags
+              </Link>
               <a href="/feed" title="Subscribe via RSS" className="p-2 rounded-lg bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 hover:text-purple-300 transition-colors">
                 <Heart className="w-5 h-5" />
               </a>
