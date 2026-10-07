@@ -1,9 +1,7 @@
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Heart, Clock, ArrowRight, Facebook, DollarSign, AlertCircle, FileText, Headphones } from 'lucide-react';
-import { format } from 'date-fns';
+import { Heart, Facebook, DollarSign, AlertCircle } from 'lucide-react';
 import SocialShare from '@/components/social-share';
+import PostCard from '@/components/post-card';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,47 +58,9 @@ export default async function HomePage() {
           <div className="text-center py-12"><p className="text-gray-400">No posts available yet.</p></div>
         ) : (
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-            {posts.map((post) => {
-              const featuredImage = post.featuredImageId
-                ? post.media.find((m: any) => m.id === post.featuredImageId)
-                : post.media.find((m: any) => m.type === 'IMAGE');
-              const hasAudio = post.media.some((m: any) => m.type === 'AUDIO' || m.type === 'VIDEO');
-              const hasPdf = post.media.some((m: any) => m.type === 'PDF');
-              return (
-                <Link key={post.id} href={`/post/${post.slug}`} className="group block">
-                  <article className="h-full bg-gray-800 rounded-lg shadow-md hover:shadow-purple-500/30 hover:shadow-xl transition-all duration-300 overflow-hidden border border-gray-700 hover:border-purple-500/50">
-                    {featuredImage && (
-                      <div className="relative aspect-video bg-gray-900">
-                        <Image src={featuredImage.url} alt={post.title} fill className="object-cover" sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" />
-                      </div>
-                    )}
-                    <div className="p-6">
-                      <div className="flex items-center gap-2 text-sm text-gray-400 mb-3">
-                        <Clock className="w-4 h-4" />
-                        <time dateTime={post.createdAt.toISOString()}>{format(new Date(post.createdAt), 'MMM d, yyyy')}</time>
-                        {hasAudio && <Headphones className="w-4 h-4 ml-2 text-purple-400" />}
-                        {hasPdf && <FileText className="w-4 h-4 text-purple-400" />}
-                      </div>
-                      <h3 className="text-xl font-bold text-white mb-3 group-hover:text-purple-400 transition-colors">{post.title}</h3>
-                      {post.tags && post.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {post.tags.slice(0, 3).map((tag: { id: string; name: string; slug: string }) => (
-                            <span key={tag.id} className="px-2 py-0.5 text-xs rounded-full bg-purple-900/40 text-purple-300 border border-purple-700/50">
-                              {tag.name}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                      <p className="text-gray-300 mb-4 line-clamp-3">{post.excerpt.substring(0, 150)}...</p>
-                      <div className="flex items-center gap-2 text-purple-500 font-medium">
-                        <span>Read More</span>
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-                  </article>
-                </Link>
-              );
-            })}
+            {posts.map((post) => (
+              <PostCard key={post.id} post={post} />
+            ))}
           </div>
         )}
       </main>

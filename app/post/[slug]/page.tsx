@@ -127,12 +127,13 @@ export default async function PostPage({ params }: { params: { slug: string } })
             {post.tags && post.tags.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-4">
                 {post.tags.map((tag: { id: string; name: string; slug: string }) => (
-                  <span
+                  <Link
                     key={tag.id}
-                    className="px-3 py-1 text-xs font-medium rounded-full bg-purple-900/50 text-purple-300 border border-purple-700"
+                    href={`/tag/${encodeURIComponent(tag.slug)}`}
+                    className="px-3 py-1 text-xs font-medium rounded-full bg-purple-900/50 text-purple-300 border border-purple-700 hover:bg-purple-800/60 hover:text-purple-200 hover:border-purple-500 transition-colors"
                   >
                     {tag.name}
-                  </span>
+                  </Link>
                 ))}
               </div>
             )}
